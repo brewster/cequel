@@ -159,6 +159,10 @@ module Cequel
       set_batch(old_batch)
     end
 
+    def batched?
+      !!get_batch
+    end
+
     private
 
     def build_connection

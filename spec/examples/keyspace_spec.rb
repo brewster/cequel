@@ -42,6 +42,25 @@ CQL
     it 'should do nothing if no statements executed in batch' do
       expect { cequel.batch {} }.to_not raise_error
     end
+
+    context 'with consistency' do
+      it 'should send enclosed write statements in bulk' do
+        connection.should_receive(:execute).with(<<CQL, [:id, :title], [1, 'Hey'], :body, 'Body')
+BEGIN BATCH USING CONSISTENCY QUORUM
+INSERT INTO posts (?) VALUES (?)
+UPDATE posts SET ? = ?
+DELETE FROM posts
+APPLY BATCH
+CQL
+
+        cequel.batch(:consistency => :quorum) do
+          cequel[:posts].insert(:id => 1, :title => 'Hey')
+          cequel[:posts].update(:body => 'Body')
+          cequel[:posts].delete
+        end
+      end
+    end
+
   end
 
   describe '::connection_pool' do

@@ -19,6 +19,7 @@ module Cequel
     def initialize(keyspace, options = {})
       @keyspace = keyspace
       @auto_apply = options[:auto_apply]
+      @consistency = options[:consistency]
       reset
     end
 
@@ -49,10 +50,17 @@ module Cequel
 
     def reset
       @statement = Statement.new
-      @statement.append("BEGIN BATCH\n")
+      @statement.append("BEGIN BATCH").append(consistency_cql).append("\n")
       @statement_count = 0
     end
 
+    def consistency_cql
+      consistency = @consistency || @keyspace.default_consistency
+      if consistency
+        " USING CONSISTENCY #{consistency.upcase}"
+      else ''
+      end
+    end
   end
 
 end

@@ -294,10 +294,13 @@ module Cequel
     # @option options [Time,Integer] :timestamp the timestamp associated with the column values
     #
     def generate_upsert_options(options)
+      if keyspace.batched? && options[:consistency].present?
+        raise ArgumentError.new("You must specify consistency on the batch")
+      end
       if keyspace.default_consistency
         options[:consistency] ||= keyspace.default_consistency
       end
-      if options.empty?
+      if options.empty? || keyspace.batched?
         ''
       else
         ' USING ' <<
@@ -335,9 +338,10 @@ module Cequel
 
     def consistency_cql
       consistency = @consistency || keyspace.default_consistency
-      if consistency
+      if consistency && !keyspace.batched?
         " USING CONSISTENCY #{consistency.upcase}"
-      else ''
+      else
+        ''
       end
     end
 
