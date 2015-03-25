@@ -1,7 +1,8 @@
 # Cequel #
 
-Cequel is a
-[CQL](http://www.datastax.com/docs/1.0/references/cql/index#cql-commands)
+Cequel is a CQL
+(Doc: [Datastax](http://www.datastax.com/docs/1.0/references/cql/index#cql-commands) or
+[Apache](http://cassandra.apache.org/doc/cql/CQL.html#CREATECOLUMNFAMILY))
 query builder and object-row mapper for
 [Cassandra](http://cassandra.apache.org/).
 
