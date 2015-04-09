@@ -6,6 +6,22 @@ shared_examples 'readable dictionary' do
 
   context 'without row in memory' do
 
+    describe '.find_each' do
+      it 'should load all rows in batches' do
+        batch_size = 2
+        connection.should_receive(:execute).with("SELECT * FROM #{cf} LIMIT #{batch_size}").
+            and_return result_stub(
+                           {'blog_id' => 1, uuid2 => 2, uuid3 => 3 },
+                           {'blog_id' => 4, uuid2 => 5, uuid3 => 6 }
+                       )
+        connection.should_receive(:execute).
+            with("SELECT * FROM #{cf} WHERE ? > ? LIMIT #{batch_size}", :blog_id, 4).
+            and_return result_stub({'blog_id' => 7, uuid2 => 8})
+        dictionary.class.find_each(batch_size).map { |blog| blog.blog_id }.
+            should == [1, 4, 7]
+      end
+    end
+
     describe '#each_pair' do
 
       it 'should load columns in batches and yield them' do
