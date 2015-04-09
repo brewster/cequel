@@ -63,19 +63,27 @@ module Cequel
         private :new
 
         def find_each(batch_size=DEFAULT_BATCH_SIZE)
+          unless ::Kernel.block_given?
+            return ::Enumerator.new do |y|
+              self.find_each(batch_size) do |val|
+                y.yield val
+              end
+            end
+          end
+
           scope = column_family.limit(batch_size)
 
           batch_scope = scope
           last_key = nil
           begin
-            batch_rows = batch_scope.to_a
+            batch_rows = fully_load_scope(batch_scope)
             break if batch_rows.empty?
-            if batch_rows.first[key_alias] == last_key
+            if batch_rows.first.key == last_key
               yield batch_rows[1..-1]
             else
-              batch_rows
+              yield batch_rows
             end
-            last_key = batch_rows.last[key_alias]
+            last_key = batch_rows.last.key
             batch_scope =
                 scope.where("? > ?", key_alias, last_key)
           end while batch_rows.length == batch_size
@@ -83,9 +91,13 @@ module Cequel
 
         def load(*keys)
           keys.flatten!
-          column_family.
-              where(key_alias.to_s => keys).
-              map do |row|
+          fully_load_scope(column_family.where(key_alias.to_s => keys))
+        end
+
+        private
+
+        def fully_load_scope(scope)
+          scope.map do |row|
             dict = new(row.delete(key_alias.to_s), row)
             if row.count >= CASSANDRA_COLUMN_LIMIT
               dict.load_remaining
@@ -96,6 +108,8 @@ module Cequel
       end
 
       include Enumerable
+
+      attr_reader :key
 
       def initialize(key, row = nil)
         @key = key
