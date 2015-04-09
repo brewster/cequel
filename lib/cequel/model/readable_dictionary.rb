@@ -5,8 +5,9 @@ module Cequel
     class ReadableDictionary
 
       # Cassandra will only fetch the first 10000 column, when dictionaries have
-      # more columsn that that, we have to handle the case
+      # more columns that that, we have to handle the case
       CASSANDRA_COLUMN_LIMIT = 10000
+      DEFAULT_BATCH_SIZE = 1000
 
       class <<self
 
@@ -60,6 +61,25 @@ module Cequel
           new(key)
         end
         private :new
+
+        def find_each(batch_size=DEFAULT_BATCH_SIZE)
+          scope = column_family.limit(batch_size)
+
+          batch_scope = scope
+          last_key = nil
+          begin
+            batch_rows = batch_scope.to_a
+            break if batch_rows.empty?
+            if batch_rows.first[key_alias] == last_key
+              yield batch_rows[1..-1]
+            else
+              batch_rows
+            end
+            last_key = batch_rows.last[key_alias]
+            batch_scope =
+                scope.where("? > ?", key_alias, last_key)
+          end while batch_rows.length == batch_size
+        end
 
         def load(*keys)
           keys.flatten!
