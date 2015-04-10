@@ -74,14 +74,15 @@ module Cequel
           find_in_batches(batch_size) { |batch| batch.each(&block) }
         end
 
-        def load(*keys)
-          keys.flatten!
-          fully_load_scope(column_family.where(key_alias.to_s => keys))
-        end
+        def find_in_batches(batch_size=DEFAULT_BATCH_SIZE)
+          unless ::Kernel.block_given?
+            return ::Enumerator.new do |y|
+              self.find_in_batches(batch_size) do |val|
+                y.yield val
+              end
+            end
+          end
 
-        private
-
-        def find_in_batches(batch_size)
           scope = column_family.limit(batch_size)
 
           batch_scope = scope
@@ -99,6 +100,13 @@ module Cequel
                 scope.where("? > ?", key_alias, last_key)
           end while batch_rows.length == batch_size
         end
+
+        def load(*keys)
+          keys.flatten!
+          fully_load_scope(column_family.where(key_alias.to_s => keys))
+        end
+
+        private
 
         def fully_load_scope(scope)
           scope.map do |row|
