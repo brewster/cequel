@@ -79,6 +79,10 @@ module Cequel
           fully_load_scope(column_family.where(key_alias.to_s => keys))
         end
 
+        def limit_with_where(limit, args)
+          fully_load_scope(column_family.limit(limit).where(*args))
+        end
+
         private
 
         def find_in_batches(batch_size)
